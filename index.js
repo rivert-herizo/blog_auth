@@ -18,6 +18,8 @@ app.use(bodyParser.urlencoded({ extended: true })); // Parse URL-encoded bodies
 app.use(expressEjsLayouts); // Use EJS layouts
 app.set('view engine', 'ejs'); // Set EJS as the templating engine
 
+let isAuthenticated = false; // Placeholder for authentication check
+
 
 // PostgreSQL database connection
 const db = new pg.Client({
@@ -32,11 +34,21 @@ db.connect();
 
 // Define routes
 app.get('/home', (req, res) =>  {
+    isAuthenticated = true;
     res.render('index.ejs', {
     layout: 'layout', 
-    title: 'Home' 
+    title: 'Home', 
+    isAuthenticated : isAuthenticated
 })
 });
+
+app.get('/login', (req, res) => {
+    res.render('login.ejs', {
+        layout: 'layout',
+        title: 'Login',
+        isAuthenticated: isAuthenticated
+    });
+})
 
 // initialize server
 app.listen(port, () => {

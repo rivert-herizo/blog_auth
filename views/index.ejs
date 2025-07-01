@@ -1,3 +1,20 @@
-<div class="container">
-    <h1>Welcome to My Blog</h1>
-</div>
+
+
+<% if(isAuthenticated) { %>
+
+    <div class="container">
+        <h1>Welcome to My Blog</h1>
+    </div>
+
+<% } else {%>
+
+    <div class="container mt-3">
+        <div class="card bg-primary text-light">
+            <div class="card-body text-center">
+               <h1>Please Login</h1>
+            </div>
+        </div>
+    </div>
+    
+<% } %>
+
