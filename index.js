@@ -50,6 +50,14 @@ app.get('/login', (req, res) => {
     });
 })
 
+app.get('/register', (req, res) => {
+    res.render('register.ejs', {
+        layout: 'layout',
+        title: 'Login',
+        isAuthenticated: isAuthenticated
+    });
+})
+
 // initialize server
 app.listen(port, () => {
     console.log("Server is running on port " + port)
