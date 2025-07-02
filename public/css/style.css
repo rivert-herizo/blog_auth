@@ -3,3 +3,7 @@
     position: absolute;
     width: 100%;
 }
+
+.logo-google, .g-button {
+    vertical-align: middle;
+}
