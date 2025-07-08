@@ -9,18 +9,18 @@
         <div class="card">
             <div class="card-body">
                 <h5 class="card-title">Register</h5>
-                <form>
+                <form action="/register" method="POST">
                     <div class="mb-3">
                         <label for="username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="username" placeholder="Your username">
+                        <input type="text" class="form-control" id="username" placeholder="Your username" name="username" required>
                     </div>
                     <div class="mb-3">
                         <label for="mail" class="form-label">Email address</label>
-                        <input type="email" class="form-control" id="mail" placeholder="name@example.com">
+                        <input type="email" class="form-control" id="mail" placeholder="name@example.com" name="email" required>
                     </div>
                     <div class="mb-3">
                         <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" placeholder="Password">
+                        <input type="password" class="form-control" id="password" placeholder="Password" name="password" required>
                     </div>
                     
                     <div class="d-grid gap-2">
