@@ -109,6 +109,41 @@ app.post('/post', async (req, res) => {
     }
 })
 
+app.get('/search', (req, res) => {
+  res.render('result.ejs', {
+    layout: 'layout',
+    title: 'Search Results',
+    isAuthenticated: isAuthenticated,
+    posts: [] // Optional: avoids undefined in view on GET
+  });
+});
+
+app.post('/search', async (req, res) => {
+  const searchQuery = req.body.searchQuery;
+
+  try {
+    const result = await db.query(
+      `SELECT posts.*, users.name 
+       FROM posts 
+       JOIN users ON posts.user_id = users.id 
+       WHERE posts.title ILIKE $1 
+         OR posts.content ILIKE $1 
+         OR users.name ILIKE $1`,
+      [`%${searchQuery}%`]
+    );
+
+    res.render('result.ejs', {
+      layout: 'layout',
+      title: 'Search Results',
+      isAuthenticated: isAuthenticated,
+      posts: result.rows,
+    });
+  } catch (err) {
+    console.error('Search query error:', err);
+    res.status(500).send('An error occurred while searching');
+  }
+});
+
 
 app.post('/register', async (req, res) => {
     const email = req.body.email;
