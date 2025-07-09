@@ -3,10 +3,13 @@ import dotenv from 'dotenv';
 import pg from 'pg';
 import bodyParser from 'body-parser';
 import ejs from 'ejs';
+import passport from 'passport';
+import { Strategy } from 'passport-local';
+import GoogleStrategy from 'passport-google-auth2'; 
 import expressEjsLayouts from 'express-ejs-layouts';
 import bcrypt from 'bcrypt';
 import session from 'express-session';
-import passport from 'passport';
+import e from 'express';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -25,14 +28,17 @@ app.use(session({
     } 
 }));
 
+
 // Middleware setup
 app.use(express.static('public')); // Serve static files from the 'public' directory
 app.use(bodyParser.urlencoded({ extended: true })); // Parse URL-encoded bodies
 app.use(expressEjsLayouts); // Use EJS layouts
 app.set('view engine', 'ejs'); // Set EJS as the templating engine
 
-let isAuthenticated = false; // Placeholder for authentication check
+app.use(passport.initialize());
+app.use(passport.session());
 
+let isAuthenticated = false; // Placeholder for authentication check
 
 // PostgreSQL database connection
 const db = new pg.Client({
@@ -71,6 +77,21 @@ app.get('/login', (req, res) => {
     });
 })
 
+app.post("/login",
+    passport.authenticate("local", {
+        successRedirect : '/home',
+        failureRedirect : '/login',
+    })
+)
+
+
+app.get('/logout', (req, res) => {
+    req.logout((err) => {
+        if (err) console.log(err);
+        res.redirect("/login");
+        isAuthenticated = false; // Reset authentication status
+    })
+})
 
 app.post('/register', async (req, res) => {
     const email = req.body.email;
@@ -99,7 +120,72 @@ app.post('/register', async (req, res) => {
     }
 });
 
+passport.use(
+    'local', 
+    new Strategy(async function verify(username, password, cb) {
+        try {
+            const checkUser = await db.query('SELECT * FROM users WHERE email = $1', [username]);
+            if(checkUser.rows.length) {
+                const user = checkUser.rows[0];
+                const hashedPassword = user.password;
+                console.log(hashedPassword);
+                bcrypt.compare(password, hashedPassword, (err, valid) => {
+                    if(err) {
+                        console.log('Error comparing passwords');
+                        return cb(err)
+                    } else {
+                        if(valid) {
+                            return cb(null, user)
+                        } else {
+                            return cb(null, false)
+                        }
+                    }
+                })
+            } else {
+                return cb("User not found")
+            }
+        } catch (error) {
+            console.log(error);
+        }
+    }
+));
 
+// app.use(
+//     'Google', 
+//     new GoogleStrategy({
+//         clientID: process.env.GOOGLE_CLIENT_ID,
+//         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+//         callbackURL: 'http://localhost:3000/auth/google/home',
+//         userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
+//     }), 
+//     async (accessToken, refreshToken, profile, cb) => {
+//         try {
+//             console.log('Google profile:', profile);
+//             const email = profile.email;
+//             const name = profile.family_name + ' ' + profile.given_name;
+//             const checkUser = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+//             if (checkUser.rows.length === 0) {
+//                 const newUser = await db.query('INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING *', [email, 'google-auth2', name]);
+//                 return cb(null, newUser.rows[0]);
+//             }
+//             else {
+//                 return cb(null, newUser.rows[0]);
+//             }
+            
+//         }
+//         catch (error){
+//             return cb(error);
+//         }
+//     }
+// );
+
+passport.serializeUser((user, cb) => {
+    cb(null,user);
+});
+
+passport.deserializeUser((user, cb) => {
+    cb(null,user);
+});
 
 // initialize server
 app.listen(port, () => {
