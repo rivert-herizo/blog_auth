@@ -95,7 +95,7 @@ app.get('/home', async (req, res) =>  {
     isAuthenticated = true;
     const user = req.user; // Get the authenticated user
     const posts = await db.query('SELECT posts.*, users.name FROM posts JOIN users ON posts.user_id = users.id ORDER BY posts.user_id DESC');
-    console.log(user)
+    // console.log(user)
     res.render('index.ejs', {
     layout: 'layout', 
     title: 'Home', 
