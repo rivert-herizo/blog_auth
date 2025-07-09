@@ -60,6 +60,7 @@ app.get('/register', (req, res) => {
     });
 })
 
+//login page route
 app.get('/login', (req, res) => {
     res.render('login.ejs', {
         layout: 'layout',
@@ -68,6 +69,7 @@ app.get('/login', (req, res) => {
     });
 })
 
+// local login route
 app.post("/login",
     passport.authenticate("local", {
         successRedirect : '/home',
@@ -75,26 +77,35 @@ app.post("/login",
     })
 )
 
-
-app.get('/logout', (req, res) => {
-    req.logout((err) => {
-        if (err) console.log(err);
-        res.redirect("/login");
-        isAuthenticated = false; // Reset authentication status
-    })
-})
-
+// Google authentication route
 app.get('/auth/google', 
     passport.authenticate('Google', {
     scope: ['email', 'profile']
 }));
 
+// Google authentication callback route
 app.get('/auth/google/home', 
     passport.authenticate('Google', {
         successRedirect: '/home',
         failureRedirect: '/login'
     }));
 
+// Home route
+app.get('/home', async (req, res) =>  {
+    isAuthenticated = true;
+    const user = req.user; // Get the authenticated user
+    const posts = await db.query('SELECT posts.*, users.name FROM posts JOIN users ON posts.user_id = users.id ORDER BY posts.user_id DESC');
+    console.log(user)
+    res.render('index.ejs', {
+    layout: 'layout', 
+    title: 'Home', 
+    posts: posts.rows,
+    isAuthenticated : isAuthenticated,
+    user: user // Pass the user object to the template
+})
+});
+
+// Create a new post route
 app.post('/post', async (req, res) => {
     const title = req.body.title;
     const content = req.body.content;
@@ -109,6 +120,7 @@ app.post('/post', async (req, res) => {
     }
 })
 
+// Search page route
 app.get('/search', (req, res) => {
   res.render('result.ejs', {
     layout: 'layout',
@@ -118,6 +130,8 @@ app.get('/search', (req, res) => {
   });
 });
 
+
+// Search functionality
 app.post('/search', async (req, res) => {
   const searchQuery = req.body.searchQuery;
 
@@ -144,7 +158,7 @@ app.post('/search', async (req, res) => {
   }
 });
 
-
+// Register route
 app.post('/register', async (req, res) => {
     const email = req.body.email;
     const password = req.body.password;
@@ -172,6 +186,7 @@ app.post('/register', async (req, res) => {
     }
 });
 
+// Passport local strategy for authentication
 passport.use(
     'local', 
     new Strategy(async function verify(username, password, cb) {
@@ -202,7 +217,7 @@ passport.use(
     }
 ));
 
-
+// Passport Google strategy for authentication
 passport.use(
     'Google', 
   new GoogleStrategy(
@@ -236,19 +251,14 @@ passport.use(
   )
 );
 
-app.get('/home', async (req, res) =>  {
-    isAuthenticated = true;
-    const user = req.user; // Get the authenticated user
-    const posts = await db.query('SELECT posts.*, users.name FROM posts JOIN users ON posts.user_id = users.id ORDER BY posts.user_id DESC');
-    console.log(user)
-    res.render('index.ejs', {
-    layout: 'layout', 
-    title: 'Home', 
-    posts: posts.rows,
-    isAuthenticated : isAuthenticated,
-    user: user // Pass the user object to the template
+//logout route
+app.get('/logout', (req, res) => {
+    req.logout((err) => {
+        if (err) console.log(err);
+        res.redirect("/login");
+        isAuthenticated = false; // Reset authentication status
+    })
 })
-});
 
 // passport.serializeUser((user, cb) => {
 //     cb(null,user);
