@@ -54,15 +54,15 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form>
+                <form action="/post" method="POST">
                     <div class="mb-3">
-                        <input class="form-control" name="userId" type="hidden">
+                        <!-- <input class="form-control" name="userId" type="hidden" > -->
                         <label for="title" class="form-label">Post Title</label>
-                        <input type="email" class="form-control" name="title" id="title" placeholder="Title">
+                        <input type="text" class="form-control" name="title" id="title" placeholder="Title" required>
                         </div>
                         <div class="mb-3">
                         <label for="content" class="form-label">Content</label>
-                        <textarea class="form-control" name="content" id="content" rows="3"></textarea>
+                        <textarea class="form-control" name="content" id="content" rows="3" name="content" required></textarea>
                     </div>
                 
             </div>

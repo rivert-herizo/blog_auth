@@ -5,7 +5,7 @@ import bodyParser from 'body-parser';
 import ejs from 'ejs';
 import passport from 'passport';
 import { Strategy } from 'passport-local';
-import GoogleStrategy from 'passport-google-auth2'; 
+import GoogleStrategy from 'passport-google-oauth2'; 
 import expressEjsLayouts from 'express-ejs-layouts';
 import bcrypt from 'bcrypt';
 import session from 'express-session';
@@ -52,15 +52,6 @@ const db = new pg.Client({
 db.connect();
 
 // Define routes
-app.get('/home', (req, res) =>  {
-    isAuthenticated = true;
-    res.render('index.ejs', {
-    layout: 'layout', 
-    title: 'Home', 
-    isAuthenticated : isAuthenticated
-})
-});
-
 app.get('/register', (req, res) => {
     res.render('register.ejs', {
         layout: 'layout',
@@ -92,6 +83,32 @@ app.get('/logout', (req, res) => {
         isAuthenticated = false; // Reset authentication status
     })
 })
+
+app.get('/auth/google', 
+    passport.authenticate('Google', {
+    scope: ['email', 'profile']
+}));
+
+app.get('/auth/google/home', 
+    passport.authenticate('Google', {
+        successRedirect: '/home',
+        failureRedirect: '/login'
+    }));
+
+app.post('/post', async (req, res) => {
+    const title = req.body.title;
+    const content = req.body.content;
+    const userId = req.user.id; // Get the authenticated user's ID
+    try {
+        const result = await db.query('INSERT INTO posts (title, content, user_id) VALUES ($1, $2, $3) RETURNING *', [title, content, userId]);
+        const post = result.rows[0];
+        res.redirect('/home');
+    }
+    catch (error){
+        console.log('Error creating post:', error);
+    }
+})
+
 
 app.post('/register', async (req, res) => {
     const email = req.body.email;
@@ -150,41 +167,76 @@ passport.use(
     }
 ));
 
-// app.use(
-//     'Google', 
-//     new GoogleStrategy({
-//         clientID: process.env.GOOGLE_CLIENT_ID,
-//         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-//         callbackURL: 'http://localhost:3000/auth/google/home',
-//         userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
-//     }), 
-//     async (accessToken, refreshToken, profile, cb) => {
-//         try {
-//             console.log('Google profile:', profile);
-//             const email = profile.email;
-//             const name = profile.family_name + ' ' + profile.given_name;
-//             const checkUser = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-//             if (checkUser.rows.length === 0) {
-//                 const newUser = await db.query('INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING *', [email, 'google-auth2', name]);
-//                 return cb(null, newUser.rows[0]);
-//             }
-//             else {
-//                 return cb(null, newUser.rows[0]);
-//             }
-            
-//         }
-//         catch (error){
-//             return cb(error);
-//         }
-//     }
-// );
 
-passport.serializeUser((user, cb) => {
-    cb(null,user);
+passport.use(
+    'Google', 
+  new GoogleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: 'http://localhost:3000/auth/google/home',
+      userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
+    },
+    async (accessToken, refreshToken, profile, cb) => {
+      try {
+        console.log('Google profile:', profile);
+        const email = profile.email;
+        const name = `${profile.family_name} ${profile.given_name}`;
+
+        const checkUser = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+
+        if (checkUser.rows.length === 0) {
+          const newUser = await db.query(
+            'INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING *',
+            [email, 'google-auth2', name]
+          );
+          return cb(null, newUser.rows[0]);
+        } else {
+          return cb(null, checkUser.rows[0]); // Use existing user
+        }
+      } catch (error) {
+        return cb(error);
+      }
+    }
+  )
+);
+
+app.get('/home', async (req, res) =>  {
+    isAuthenticated = true;
+    const user = req.user; // Get the authenticated user
+    const posts = await db.query('SELECT posts.*, users.name FROM posts JOIN users ON posts.user_id = users.id ORDER BY posts.user_id DESC');
+    console.log(user)
+    res.render('index.ejs', {
+    layout: 'layout', 
+    title: 'Home', 
+    posts: posts.rows,
+    isAuthenticated : isAuthenticated,
+    user: user // Pass the user object to the template
+})
 });
 
-passport.deserializeUser((user, cb) => {
-    cb(null,user);
+// passport.serializeUser((user, cb) => {
+//     cb(null,user);
+// });
+
+// passport.deserializeUser((user, cb) => {
+//     cb(null,user);
+// });
+passport.serializeUser((user, cb) => {
+  cb(null, user.id); // just the user ID
+});
+
+passport.deserializeUser(async (id, cb) => {
+  try {
+    const result = await db.query('SELECT * FROM users WHERE id = $1', [id]);
+    if (result.rows.length > 0) {
+      cb(null, result.rows[0]);
+    } else {
+      cb(null, false); // user not found
+    }
+  } catch (err) {
+    cb(err);
+  }
 });
 
 // initialize server
